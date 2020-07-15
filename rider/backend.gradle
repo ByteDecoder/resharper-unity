@@ -21,7 +21,7 @@ task prepareRdFrameworkNet35Props {
         assert dotNetSdkPath.isDirectory()
         def propsFolder = new File(project.projectDir.parent, "unity/build/generated")
         def propsFile = new File(propsFolder, "PackageReference.JetBrains.RdFramework.net35.Props")
-        buildServer.progress("Generating $propsFile")
+        buildServer.progress("Generating '$propsFile.canonicalPath'")
         propsFolder.mkdirs()
         propsFile.createNewFile()
         propsFile.text = new File("$dotNetSdkPath/Build/PackageReference.JetBrains.RdFramework.Props").text.replace("JetBrains.RdFramework", "JetBrains.RdFramework.net35")
@@ -29,7 +29,7 @@ task prepareRdFrameworkNet35Props {
 }
 
 task prepareNuGetConfig {
-    dependsOn prepareRiderBuildProps
+    dependsOn prepareRiderBuildProps, prepareRdFrameworkNet35Props
 
     doLast {
         def dotNetSdkPath = backend.getDotNetSdkPath()
@@ -50,46 +50,10 @@ task prepareNuGetConfig {
     }
 }
 
-task restoreReSharperHostPluginPackages(type: nugetRestore.class) {
-    group backendGroup
-    description 'Restores packages for backend plugin'
-    dependsOn prepareNuGetConfig, prepareRdFrameworkNet35Props
-
-    solutionFile backend.resharperHostPluginSolution
-    noCache = true
-    sources = [
-            'https://api.nuget.org/v3/index.json'
-    ]
-    doFirst {
-        project.buildServer.progress("Restoring packages for $solutionFile")
-
-        // Add in doFirst, so we get a chance to download the SDKs
-        sources.add(project.backend.getDotNetSdkPath())
-    }
-}
-
-task restoreUnityEditorPluginPackages(type: nugetRestore.class) {
-    group backendGroup
-    description 'Restores packages for Unity Editor plugin'
-
-    solutionFile backend.unityPluginSolution
-    noCache = true
-    sources = [
-            'https://api.nuget.org/v3/index.json'
-    ]
-    doFirst {
-        project.buildServer.progress("Restoring packages for $solutionFile")
-
-        // Add in doFirst, so we get a chance to download the SDKs
-        sources.add(project.backend.getDotNetSdkPath())
-    }
-}
-
-
 task buildReSharperHostPlugin(type: DotNetBuildTask) {
-    group restoreReSharperHostPluginPackages
+    group backendGroup
     description 'Builds the full ReSharper backend plugin solution'
-    dependsOn restoreReSharperHostPluginPackages, generateModel
+    dependsOn prepareNuGetConfig, generateModel
 
     buildFile = backend.resharperHostPluginSolution
 }
@@ -97,7 +61,7 @@ task buildReSharperHostPlugin(type: DotNetBuildTask) {
 task buildUnityEditorPlugin(type: DotNetBuildTask) {
     group backendGroup
     description 'Builds the Unity editor plugin'
-    dependsOn restoreUnityEditorPluginPackages, generateModel
+    dependsOn prepareNuGetConfig, generateModel
 
     buildFile = backend.unityPluginSolution
 }

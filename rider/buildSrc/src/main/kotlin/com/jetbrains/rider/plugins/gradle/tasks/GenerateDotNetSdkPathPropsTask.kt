@@ -16,7 +16,7 @@ open class GenerateDotNetSdkPathPropsTask: DefaultTask() {
 
     @TaskAction
     fun generate() {
-        project.buildServer.progress("Generating DotNetSdkPath.generated.props")
+        project.buildServer.progress("Generating :${propsFile.canonicalPath}...")
         project.file(propsFile).writeText("""<Project>
           <PropertyGroup>
             <DotNetSdkPath>${dotNetSdkPath?.let { project.file(it)} }</DotNetSdkPath>
